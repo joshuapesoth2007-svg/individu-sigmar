@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WebGIS Pemetaan Pemukiman Kelurahan Winangun II</title>
+<meta name="description" content="WebGIS interaktif pemetaan pemukiman Kelurahan Winangun II oleh Joshua Pesoth." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loader">
+  <div class="loader-ring"></div>
+  <div class="loader-text">Memuat WebGIS...</div>
+</div>
+
+<!-- Navbar -->
+<header class="navbar">
+  <a href="#home" class="brand" data-nav="home">
+    <span class="brand-logo"><i class="fa-solid fa-map-location-dot"></i></span>
+    <div class="brand-text">
+      <strong>WebGIS Winangun II</strong>
+      <small>Pemetaan Pemukiman</small>
+    </div>
+  </a>
+  <nav class="nav-links">
+    <a href="#home" class="nav-link active" data-nav="home">Home</a>
+    <a href="#peta" class="nav-link" data-nav="peta">Peta</a>
+    <a href="#tentang" class="nav-link" data-nav="tentang">Tentang</a>
+    <a href="#kontak" class="nav-link" data-nav="kontak">Kontak</a>
+  </nav>
+  <div class="nav-actions">
+    <button id="themeToggle" class="icon-btn" title="Toggle dark mode"><i class="fa-solid fa-moon"></i></button>
+    <button id="menuToggle" class="icon-btn mobile-only" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+  </div>
+</header>
+
+<!-- HOME -->
+<section id="home" class="page active">
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-inner">
+      <span class="chip"><i class="fa-solid fa-sparkles"></i> WebGIS Modern · Interaktif</span>
+      <h1>Pemetaan Pemukiman<br/><span>Kelurahan Winangun II</span></h1>
+      <p>Jelajahi persebaran pemukiman, kepadatan, dan informasi wilayah secara visual dengan peta interaktif berbasis Leaflet & QGIS.</p>
+      <div class="hero-actions">
+        <a href="#peta" class="btn btn-primary" data-nav="peta">Buka Peta <i class="fa-solid fa-arrow-right"></i></a>
+        <a href="#tentang" class="btn btn-ghost" data-nav="tentang">Tentang Proyek</a>
+      </div>
+    </div>
+  </div>
+
+  <section class="container features">
+    <div class="card feature">
+      <div class="ico"><i class="fa-solid fa-location-dot"></i></div>
+      <h3>Peta Interaktif</h3>
+      <p>Layer pemukiman dengan popup informatif, basemap berlapis, dan geolocation.</p>
+    </div>
+    <div class="card feature">
+      <div class="ico"><i class="fa-solid fa-layer-group"></i></div>
+      <h3>Layer Control</h3>
+      <p>Toggle layer & basemap (OSM, Satellite, Dark) sesuai kebutuhan.</p>
+    </div>
+    <div class="card feature">
+      <div class="ico"><i class="fa-solid fa-chart-column"></i></div>
+      <h3>Dashboard Statistik</h3>
+      <p>Grafik kepadatan, jumlah rumah, dan jenis bangunan secara real-time.</p>
+    </div>
+  </section>
+
+  <section class="container">
+    <div class="section-head">
+      <small>Dashboard</small>
+      <h2>Statistik Pemukiman</h2>
+    </div>
+    <div class="stats">
+      <div class="card stat"><small>Total Blok</small><b id="stTotal">0</b></div>
+      <div class="card stat"><small>Total Rumah</small><b id="stHouses">0</b></div>
+      <div class="card stat"><small>Padat</small><b id="stPadat">0</b></div>
+      <div class="card stat"><small>Jarang</small><b id="stJarang">0</b></div>
+    </div>
+    <div class="charts">
+      <div class="card"><h3>Distribusi Kepadatan</h3><div class="chart-wrap"><canvas id="chartDensity"></canvas></div></div>
+      <div class="card"><h3>Jenis Bangunan</h3><div class="chart-wrap"><canvas id="chartType"></canvas></div></div>
+    </div>
+  </section>
+</section>
+
+<!-- PETA -->
+<section id="peta" class="page page-map">
+  <div id="map"></div>
+
+  <aside id="sidebar" class="sidebar glass">
+    <div class="sb-section">
+      <div class="search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="searchInput" placeholder="Cari blok, RT, RW..." />
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-title"><i class="fa-solid fa-layer-group"></i> Layer</div>
+      <label class="toggle"><span>Pemukiman</span><input type="checkbox" id="togglePem" checked><i></i></label>
+      <label class="toggle"><span>Batas Wilayah</span><input type="checkbox" id="toggleBound" checked><i></i></label>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-title">Basemap</div>
+      <div class="seg" id="basemapSeg">
+        <button data-bm="osm" class="active">OSM</button>
+        <button data-bm="sat">Satellite</button>
+        <button data-bm="dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-title"><i class="fa-solid fa-filter"></i> Filter Kepadatan</div>
+      <div class="seg" id="densitySeg">
+        <button data-d="all" class="active">Semua</button>
+        <button data-d="Padat">Padat</button>
+        <button data-d="Sedang">Sedang</button>
+        <button data-d="Jarang">Jarang</button>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-title">Legenda</div>
+      <div class="legend"><span class="sw" style="background:#ef4444"></span> Padat</div>
+      <div class="legend"><span class="sw" style="background:#f59e0b"></span> Sedang</div>
+      <div class="legend"><span class="sw" style="background:#10b981"></span> Jarang</div>
+      <div class="legend"><span class="sw dashed"></span> Batas wilayah</div>
+    </div>
+
+    <div id="selectedInfo" class="card hidden"></div>
+
+    <div class="sb-foot"><span id="countInfo">0 blok</span></div>
+  </aside>
+
+  <button id="sbToggle" class="fab fab-tl" title="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+  <div class="fab-stack">
+    <button id="btnLocate" class="fab" title="Lokasi saya"><i class="fa-solid fa-location-crosshairs"></i></button>
+    <button id="btnFs" class="fab" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
+    <button id="btnReset" class="fab" title="Reset"><i class="fa-solid fa-rotate-left"></i></button>
+  </div>
+</section>
+
+<!-- TENTANG -->
+<section id="tentang" class="page">
+  <div class="hero small">
+    <div class="hero-bg"></div>
+    <div class="hero-inner">
+      <small>Tentang Proyek</small>
+      <h1>WebGIS Pemetaan Pemukiman</h1>
+      <p>Visualisasi spasial pemukiman Kelurahan Winangun II menggunakan QGIS & Leaflet, dirancang dengan UI modern.</p>
+    </div>
+  </div>
+  <div class="container grid-2">
+    <div class="card"><div class="ico"><i class="fa-solid fa-bullseye"></i></div><h3>Tujuan</h3><p>Menyajikan informasi pemukiman secara interaktif untuk perencanaan, edukasi, dan transparansi data wilayah.</p></div>
+    <div class="card"><div class="ico"><i class="fa-solid fa-database"></i></div><h3>Sumber Data</h3><p>Data shapefile/GeoJSON pemukiman hasil pengolahan QGIS, atribut: nama, RT/RW, jumlah rumah, kepadatan.</p></div>
+    <div class="card"><div class="ico"><i class="fa-solid fa-code"></i></div><h3>Teknologi</h3><p>QGIS · QGIS2Web · Leaflet.js · HTML/CSS/JS · Chart.js · Font Awesome.</p></div>
+    <div class="card"><div class="ico"><i class="fa-solid fa-graduation-cap"></i></div><h3>Pembuat</h3><p>Joshua Pesoth — NIM 241011060004.</p></div>
+  </div>
+  <div class="container">
+    <div class="card big">
+      <h2>Kelurahan Winangun II</h2>
+      <p>Terletak di Kecamatan Malalayang, Kota Manado, Sulawesi Utara. Wilayah ini memiliki karakteristik pemukiman beragam — dari kawasan padat hingga area dengan ruang terbuka yang masih luas.</p>
+    </div>
+  </div>
+</section>
+
+<!-- KONTAK -->
+<section id="kontak" class="page">
+  <div class="hero small">
+    <div class="hero-bg"></div>
+    <div class="hero-inner">
+      <small>Kontak</small>
+      <h1>Hubungi Kami</h1>
+      <p>Punya pertanyaan, masukan, atau ingin berkolaborasi? Silakan hubungi.</p>
+    </div>
+  </div>
+  <div class="container grid-2">
+    <div class="card">
+      <div class="profile">
+        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+        <div><strong>Joshua Pesoth</strong><small>Pembuat & Developer</small></div>
+      </div>
+      <ul class="info-list">
+        <li><i class="fa-solid fa-graduation-cap"></i> NIM 241011060004</li>
+        <li><i class="fa-solid fa-envelope"></i> joshua.pesoth@example.ac.id</li>
+        <li><i class="fa-solid fa-location-dot"></i> Kel. Winangun II, Manado</li>
+      </ul>
+    </div>
+    <form class="card" onsubmit="event.preventDefault(); alert('Pesan terkirim (demo)');">
+      <h3>Kirim Pesan</h3>
+      <input required placeholder="Nama" />
+      <input required type="email" placeholder="Email" />
+      <textarea required rows="4" placeholder="Pesan..."></textarea>
+      <button type="submit" class="btn btn-primary">Kirim Pesan</button>
+    </form>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container foot-inner">
+    <span>© <span id="yr"></span> WebGIS Pemukiman Winangun II</span>
+    <span>Dibuat oleh <strong>Joshua Pesoth</strong> · NIM 241011060004</span>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="data/boundary.js"></script>
+<script src="data/pemukiman.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
